@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Object Detection Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎥 Real-Time Object Detection</h1>
+            <p class="subtitle">Powered by YOLOv8 & Deep Learning</p>
+        </header>
+
+        <div class="dashboard">
+            <div>
+                <div class="card">
+                    <h2>
+                        <span class="status-indicator" id="statusIndicator"></span>
+                        Live Detection Feed
+                    </h2>
+                    <div class="video-container">
+                        <img id="videoFeed" src="" alt="Video Feed">
+                        <div class="video-placeholder" id="placeholder">
+                            <h3>📹 Camera Not Active</h3>
+                            <p>Click "Start Camera" to begin detection</p>
+                        </div>
+                    </div>
+                    <div class="controls">
+                        <div class="control-row">
+                            <label for="cameraIdInput" class="camera-id-label">Camera ID</label>
+                            <input id="cameraIdInput" type="number" min="0" value="0" class="camera-id-input">
+                            <button id="startCameraBtn" class="btn-primary" onclick="startCamera()">▶ Start Camera</button>
+                            <button id="stopCameraBtn" class="btn-danger" onclick="stopCamera()">⏹ Stop Camera</button>
+                        </div>
+                        <div class="control-row">
+                            <button class="btn-success" onclick="exportData()">📊 Export CSV</button>
+                        </div>
+                        <div class="control-row">
+                            <input type="file" id="photoUpload" accept="image/*" title="Upload image file" class="hidden-input">
+                            <button class="btn-info" onclick="document.getElementById('photoUpload').click()">📷 Detect Photo</button>
+                        </div>
+                    
+                        <div class="control-row">
+                            <input type="file" id="videoUpload" accept="video/*" title="Upload video file" class="hidden-input">
+                            <button class="btn-primary" onclick="document.getElementById('videoUpload').click()">🎬 Upload Video</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-spaced">
+                    <h2>🎯 Recent Detections</h2>
+                    <div class="detection-list" id="detectionList">
+                        <p class="placeholder-text">No detections yet</p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="card">
+                    <h2>📊 Live Statistics</h2>
+                    <div class="stats-grid">
+                        <div class="stat-box">
+                            <div class="stat-value" id="fpsValue">0</div>
+                            <div class="stat-label">FPS</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="objectCount">0</div>
+                            <div class="stat-label">Objects</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="classCount">0</div>
+                            <div class="stat-label">Classes</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-value" id="totalDetections">0</div>
+                            <div class="stat-label">Total Detected</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-spaced">
+                    <h2>🔔 Alerts</h2>
+                    <div id="alertsList">
+                        <p class="placeholder-text">No alerts</p>
+                    </div>
+                </div>
+
+                <div class="card card-spaced">
+                    <h2>📈 Class Distribution</h2>
+                    <div id="classStats">
+                        <p class="placeholder-text">Start detection to see stats</p>
+                    </div>
+                </div>
+
+                <div class="card card-spaced">
+                    <h2>⚡ Performance Metrics</h2>
+                    <div class="performance-metrics" id="performanceMetrics">
+                        <div class="metric-item">
+                            <span class="metric-label">Quality Score</span>
+                            <span class="metric-value" id="qualityScore">--</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Avg Proc. Time</span>
+                            <span class="metric-value" id="avgProcTime">--ms</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Total Frames</span>
+                            <span class="metric-value" id="totalFrames">0</span>
+                        </div>
+                        <div class="metric-item">
+                            <span class="metric-label">Avg Confidence</span>
+                            <span class="metric-value" id="avgConfidence">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Photo Detection Modal -->
+        <div id="photoModal" class="modal">
+            <div class="modal-content modal-large">
+                <span class="close-modal" onclick="closePhotoModal()">&times;</span>
+                <h2>📷 Photo Detection Results</h2>
+                <div class="modal-body modal-body-large">
+                    <div class="modal-tabs">
+                        <button class="tab-btn active" onclick="switchPhotoTab('results')">📊 Results</button>
+                        <button class="tab-btn" onclick="switchPhotoTab('confidence')">📈 Confidence</button>
+                        <button class="tab-btn" onclick="switchPhotoTab('history')">📜 History</button>
+                    </div>
+                    
+                    <!-- Results Tab -->
+                    <div id="resultsTab" class="tab-content active">
+                        <div class="results-container">
+                            <div id="photoResultImage" class="photo-result-container">
+                                <!-- Result image will be displayed here -->
+                            </div>
+                            <div class="photo-results-info">
+                                <div class="info-grid">
+                                    <div class="info-item">
+                                        <span class="info-label">Objects Detected:</span>
+                                        <span class="info-value" id="photoObjectCount">0</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Processing Time:</span>
+                                        <span class="info-value" id="photoProcessingTime">0ms</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Avg Confidence:</span>
+                                        <span class="info-value" id="photoAvgConfidence">0%</span>
+                                    </div>
+                                    <div class="info-item">
+                                        <span class="info-label">Timestamp:</span>
+                                        <span class="info-value" id="photoTimestamp">--:--:--</span>
+                                    </div>
+                                </div>
+                                <div id="photoDetectionsList" class="photo-detections-list">
+                                    <!-- Detection details will be listed here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Confidence Graph Tab -->
+                    <div id="confidenceTab" class="tab-content">
+                        <div class="confidence-container">
+                            <div id="confidenceChart" class="confidence-chart">
+                                <!-- Confidence bars will be displayed here -->
+                            </div>
+                            <div class="confidence-stats">
+                                <h3>Statistics</h3>
+                                <div id="confidenceStats">
+                                    <!-- Stats will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- History Tab -->
+                    <div id="historyTab" class="tab-content">
+                        <div class="history-container">
+                            <div class="history-filter">
+                                <input type="text" id="historyFilter" placeholder="Filter by class name..." onkeyup="filterDetectionHistory()">
+                                <button class="btn-small" onclick="clearDetectionHistory()">🗑️ Clear History</button>
+                            </div>
+                            <div id="detectionHistory" class="detection-history-list">
+                                <!-- History items will be displayed here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
